@@ -1,0 +1,50 @@
+name: Compile Forked Extension
+
+on:
+  push:
+    branches:
+      - 'fix/steam-achievements' # ⚠️ REPLACE with your exact custom branch name (e.g., dev, feature-1)
+  pull_request:
+    branches:
+      - 'your-branch-name' # Triggers when you open a PR targeting this branch
+  workflow_dispatch: # 🚀 MANDATORY: Allows you to manually click "Run" on any branch
+
+jobs:
+  build:
+    runs-on: windows-latest # Required for Playnite's Toolbox.exe
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x' # Use '6.0.x' or '8.0.x' depending on the Playnite version target
+
+    # Note: Look at your forked repository folder structure.
+    # If the .sln file is in the root, change this to just: dotnet restore YourPlugin.sln
+    # If it is inside a folder, include the folder name.
+    - name: Restore Dependencies
+      run: dotnet restore source/YourPluginSolution.sln
+
+    - name: Build Plugin
+      run: dotnet build source/YourPluginSolution.sln --configuration Release --no-restore
+
+    - name: Download Playnite Toolbox
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com" -OutFile "Toolbox.exe"
+
+    - name: Package Extension (.pext)
+      shell: pwsh
+      run: |
+        # ⚠️ Replace the first path with the folder where your compiled 'extension.yaml' sits
+        ./Toolbox.exe pack "source/YourPluginProject/bin/Release" "./build"
+
+    - name: Upload Compiled Addon to GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: playnite-extension-debug
+        path: ./build/*.pext
+        retention-days: 5 # Deletes the temporary file after 5 days to save space
