@@ -45,22 +45,27 @@ jobs:
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # 1. Ensure the staging build folder exists
-        New-Item -ItemType Directory -Force -Path "./build"
+        # 1. Ensure the staging build folder exists using an absolute path reference
+        $BuildOutput = (Get-Item ".").FullName + "\build"
+        New-Item -ItemType Directory -Force -Path $BuildOutput
 
-        # 2. Copy the extension.yaml file into the compilation output folder
+        # 2. Copy your local extension.yaml file into your compiled Release folder
         Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
         
-        # 3. Reference the exact installation location where Chocolatey places Playnite
-        $ToolboxPath = "C:\ProgramData\chocolatey\lib\playnite\tools\Playnite\Toolbox.exe"
-        
-        # Fallback check if Chocolatey paths map to local appdata inside the virtual runner environment
-        if (-not (Test-Path $ToolboxPath)) {
-            $ToolboxPath = "C:\Users\runneradmin\AppData\Local\Playnite\Toolbox.exe"
+        # 3. Resolve the exact absolute path to your compiled binaries 
+        $ExtensionFolder = (Get-Item "./source/bin/Release").FullName
+
+        # 4. Locate where Chocolatey installed Playnite's central binary folder
+        $PlayniteAppDir = "C:\ProgramData\chocolatey\lib\playnite\tools\Playnite"
+        if (-not (Test-Path $PlayniteAppDir)) {
+            $PlayniteAppDir = "C:\Users\runneradmin\AppData\Local\Playnite"
         }
-        
-        # Execute packaging 
-        & $ToolboxPath pack "./source/bin/Release" "./build"
+
+        # 🔑 FIX: Jump the terminal directly into Playnite's system directory so NLog.dll loads perfectly
+        Set-Location -Path $PlayniteAppDir
+
+        # 5. Execute the compilation passing absolute paths for the build parameters
+        ./Toolbox.exe pack "$ExtensionFolder" "$BuildOutput"
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
