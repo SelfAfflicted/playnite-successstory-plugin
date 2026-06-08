@@ -40,22 +40,22 @@ jobs:
     - name: Download and Unpack Playnite Portable
       shell: pwsh
       run: |
-        # 1. Download official portable Playnite package containing a valid compiled Toolbox.exe
-        Invoke-WebRequest -Uri "https://github.com" -OutFile "playnite.zip"
+        # 1. Download official portable archive directly from the release mirrors
+        Invoke-WebRequest -Uri "https://github.com" -OutFile "playnite.7z"
         
-        # 2. Extract it to access the legal, functional tools folder
-        Expand-Archive -Path "playnite.zip" -DestinationPath "./PlayniteTools"
+        # 2. Extract using native 7-Zip installed on the Windows image
+        & "7z" x "playnite.7z" -o"./PlayniteTools"
 
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # 1. Ensure the output directory for your build exists
+        # 1. Force generate build destination to guarantee the path exists
         New-Item -ItemType Directory -Force -Path "./build"
 
-        # 2. Copy the extension.yaml file into the compilation output folder so Toolbox can read it
+        # 2. Copy the extension.yaml file into the compilation output folder so Toolbox can register metadata
         Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
         
-        # 3. Use the working, native compiled Toolbox.exe from the official portable release folder
+        # 3. Use the working, native compiled Toolbox.exe from the portable core
         ./PlayniteTools/Toolbox.exe pack "./source/bin/Release" "./build"
 
     - name: Upload Compiled Addon to GitHub
