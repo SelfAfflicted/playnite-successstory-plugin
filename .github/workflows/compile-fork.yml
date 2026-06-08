@@ -26,10 +26,10 @@ jobs:
     # If the .sln file is in the root, change this to just: dotnet restore YourPlugin.sln
     # If it is inside a folder, include the folder name.
     - name: Restore Dependencies
-      run: dotnet restore source/SuccessStory.sln
+      run: dotnet restore ./source/SuccessStory.sln
 
     - name: Build Plugin
-      run: dotnet build source/SuccessStory.sln --configuration Release --no-restore
+      run: dotnet build ./source/SuccessStory.sln --configuration Release --no-restore
 
     - name: Download Playnite Toolbox
       shell: pwsh
