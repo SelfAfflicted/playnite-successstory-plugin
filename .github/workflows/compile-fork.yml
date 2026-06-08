@@ -37,19 +37,26 @@ jobs:
     - name: Build Plugin with MSBuild
       run: msbuild ./source/SuccessStory.sln /p:Configuration=Release /p:Platform="Any CPU"
 
-    - name: Download Playnite Toolbox
+    - name: Download and Unpack Playnite Portable
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://github.com" -OutFile "Toolbox.exe"
+        # 1. Download official portable Playnite package containing a valid compiled Toolbox.exe
+        Invoke-WebRequest -Uri "https://github.com" -OutFile "playnite.zip"
+        
+        # 2. Extract it to access the legal, functional tools folder
+        Expand-Archive -Path "playnite.zip" -DestinationPath "./PlayniteTools"
 
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # Copy the extension.yaml file into the compilation output folder so Toolbox can see it
+        # 1. Ensure the output directory for your build exists
+        New-Item -ItemType Directory -Force -Path "./build"
+
+        # 2. Copy the extension.yaml file into the compilation output folder so Toolbox can read it
         Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
         
-        # Pack the compiled Release directory
-        ./Toolbox.exe pack "./source/bin/Release" "./build"
+        # 3. Use the working, native compiled Toolbox.exe from the official portable release folder
+        ./PlayniteTools/Toolbox.exe pack "./source/bin/Release" "./build"
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
