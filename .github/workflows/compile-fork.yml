@@ -40,7 +40,7 @@ jobs:
       shell: pwsh
       run: |
         # ⚠️ Replace the first path with the folder where your compiled 'extension.yaml' sits
-        ./Toolbox.exe pack "source/" "./build"
+        ./Toolbox.exe pack ".source/" "./build"
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
