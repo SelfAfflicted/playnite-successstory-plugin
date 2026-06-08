@@ -1,0 +1,53 @@
+name: Build and Release Playnite Extension
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers whenever you push a version tag like v1.0.0
+  workflow_dispatch: # Allows you to manually trigger the build from GitHub UI
+
+jobs:
+  build:
+    runs-on: windows-latest # Windows is required to run Playnite's Toolbox.exe
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x' # Match this with your plugin's target .NET framework
+
+    - name: Restore Dependencies
+      run: dotnet restore source/YourPluginSolution.sln
+
+    - name: Build Plugin
+      run: dotnet build source/YourPluginSolution.sln --configuration Release --no-restore
+
+    - name: Download Playnite Toolbox
+      shell: pwsh
+      run: |
+        # Fetches the official Toolbox binary directly from the Playnite repository
+        Invoke-WebRequest -Uri "https://github.com" -OutFile "Toolbox.exe"
+
+    - name: Package Extension (.pext)
+      shell: pwsh
+      run: |
+        # Pack target folder into a .pext format.
+        # Replace the first path with your exact Release output directory containing 'extension.yaml'
+        ./Toolbox.exe pack "source/YourPluginProject/bin/Release" "./build"
+
+    - name: Upload Artifacts (Optional)
+      uses: actions/upload-artifact@v4
+      with:
+        name: playnite-extension
+        path: ./build/*.pext
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./build/*.pext
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
