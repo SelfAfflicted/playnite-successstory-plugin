@@ -45,34 +45,22 @@ jobs:
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # 1. Ensure the staging build folder exists using absolute references
-        $BuildOutput = (Get-Item ".").FullName + "\build"
-        New-Item -ItemType Directory -Force -Path $BuildOutput
+        # 1. Create a clean, isolated staging folder for the extension contents
+        $StagingDir = "./staging"
+        New-Item -ItemType Directory -Force -Path $StagingDir
+        New-Item -ItemType Directory -Force -Path "./build"
 
-        # 2. Copy your local extension.yaml file into your compiled Release folder
-        Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
-        
-        # 3. Resolve absolute path to your compiled binaries
-        $ExtensionFolder = (Get-Item "./source/bin/Release").FullName
+        # 2. Copy the compiled binaries into the staging folder
+        Copy-Item -Path "./source/bin/Release/*" -Destination $StagingDir -Recurse -Force
 
-        # 4. Locate where Chocolatey installed Playnite's central binary folder
-        $PlayniteAppDir = "C:\ProgramData\chocolatey\lib\playnite\tools\Playnite"
-        if (-not (Test-Path $PlayniteAppDir)) {
-            $PlayniteAppDir = "C:\Users\runneradmin\AppData\Local\Playnite"
-        }
+        # 3. Explicitly copy the extension.yaml file into the root of the staging folder
+        Copy-Item -Path "./source/extension.yaml" -Destination $StagingDir -Force
 
-        # 🔑 FIX: Find NLog.dll from your NuGet restore cache and copy it directly into the Playnite folder
-        # This completely bypasses the missing assembly exception by ensuring it sits right next to Toolbox.exe
-        $CachedNLog = Get-ChildItem -Path "./source/packages" -Filter "NLog.dll" -Recurse | Select-Object -First 1
-        if ($CachedNLog) {
-            Copy-Item $CachedNLog.FullName -Destination $PlayniteAppDir -Force
-        }
+        # 4. Use native PowerShell to compress the folder into a standard zip package
+        Compress-Archive -Path "$StagingDir/*" -DestinationPath "./build/SuccessStory.zip" -Force
 
-        # 5. Jump the terminal directly into Playnite's system directory so all sibling dependencies load perfectly
-        Set-Location -Path $PlayniteAppDir
-
-        # 6. Execute compilation using absolute paths for the build parameters
-        ./Toolbox.exe pack "$ExtensionFolder" "$BuildOutput"
+        # 5. Rename the extension from .zip to Playnite's native .pext extension format
+        Rename-Item -Path "./build/SuccessStory.zip" -NewName "SuccessStory.pext" -Force
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
