@@ -45,14 +45,14 @@ jobs:
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # 1. Ensure the staging build folder exists using an absolute path reference
+        # 1. Ensure the staging build folder exists using absolute references
         $BuildOutput = (Get-Item ".").FullName + "\build"
         New-Item -ItemType Directory -Force -Path $BuildOutput
 
         # 2. Copy your local extension.yaml file into your compiled Release folder
         Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
         
-        # 3. Resolve the exact absolute path to your compiled binaries 
+        # 3. Resolve absolute path to your compiled binaries
         $ExtensionFolder = (Get-Item "./source/bin/Release").FullName
 
         # 4. Locate where Chocolatey installed Playnite's central binary folder
@@ -61,10 +61,17 @@ jobs:
             $PlayniteAppDir = "C:\Users\runneradmin\AppData\Local\Playnite"
         }
 
-        # 🔑 FIX: Jump the terminal directly into Playnite's system directory so NLog.dll loads perfectly
+        # 🔑 FIX: Find NLog.dll from your NuGet restore cache and copy it directly into the Playnite folder
+        # This completely bypasses the missing assembly exception by ensuring it sits right next to Toolbox.exe
+        $CachedNLog = Get-ChildItem -Path "./source/packages" -Filter "NLog.dll" -Recurse | Select-Object -First 1
+        if ($CachedNLog) {
+            Copy-Item $CachedNLog.FullName -Destination $PlayniteAppDir -Force
+        }
+
+        # 5. Jump the terminal directly into Playnite's system directory so all sibling dependencies load perfectly
         Set-Location -Path $PlayniteAppDir
 
-        # 5. Execute the compilation passing absolute paths for the build parameters
+        # 6. Execute compilation using absolute paths for the build parameters
         ./Toolbox.exe pack "$ExtensionFolder" "$BuildOutput"
 
     - name: Upload Compiled Addon to GitHub
