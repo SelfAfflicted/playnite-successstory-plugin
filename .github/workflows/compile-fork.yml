@@ -17,24 +17,25 @@ jobs:
     - name: Checkout Repository with Submodules
       uses: actions/checkout@v4
       with:
-        submodules: recursive # 🔑 FIX: This pulls down the missing 'playnite-plugincommon' project
+        submodules: recursive
 
     - name: Ensure Submodules are Initialized
       run: git submodule update --init --recursive
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x' # Use '6.0.x' or '8.0.x' depending on the Playnite version target
+    # 🛠️ CHANGED: Use MSBuild instead of 'dotnet' to support legacy Playnite frameworks
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
 
-    # Note: Look at your forked repository folder structure.
-    # If the .sln file is in the root, change this to just: dotnet restore YourPlugin.sln
-    # If it is inside a folder, include the folder name.
-    - name: Restore Dependencies
-      run: dotnet restore ./source/SuccessStory.sln
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
 
-    - name: Build Plugin
-      run: dotnet build ./source/SuccessStory.sln --configuration Release --no-restore
+    # This forces the runner to download the libraries that the .csproj file is complaining about
+    - name: Restore NuGet Packages
+      run: nuget restore ./source/SuccessStory.sln
+
+    # 🛠️ CHANGED: Compile using MSBuild with Release configuration
+    - name: Build Plugin with MSBuild
+      run: msbuild ./source/SuccessStory.sln /p:Configuration=Release /p:Platform="Any CPU"
 
     - name: Download Playnite Toolbox
       shell: pwsh
@@ -44,12 +45,15 @@ jobs:
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # ⚠️ Replace the first path with the folder where your compiled 'extension.yaml' sits
-        ./Toolbox.exe pack ".source/" "./build"
+        # Copy the extension.yaml file into the compilation output folder so Toolbox can see it
+        Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
+        
+        # Pack the compiled Release directory
+        ./Toolbox.exe pack "./source/bin/Release" "./build"
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
       with:
         name: playnite-extension-debug
         path: ./build/*.pext
-        retention-days: 5 # Deletes the temporary file after 5 days to save space
+        retention-days: 5
