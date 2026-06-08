@@ -14,8 +14,13 @@ jobs:
     runs-on: windows-latest # Required for Playnite's Toolbox.exe
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout Repository with Submodules
       uses: actions/checkout@v4
+      with:
+        submodules: recursive # 🔑 FIX: This pulls down the missing 'playnite-plugincommon' project
+
+    - name: Ensure Submodules are Initialized
+      run: git submodule update --init --recursive
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
