@@ -26,10 +26,10 @@ jobs:
     # If the .sln file is in the root, change this to just: dotnet restore YourPlugin.sln
     # If it is inside a folder, include the folder name.
     - name: Restore Dependencies
-      run: dotnet restore source/YourPluginSolution.sln
+      run: dotnet restore source/SuccessStory.sln
 
     - name: Build Plugin
-      run: dotnet build source/YourPluginSolution.sln --configuration Release --no-restore
+      run: dotnet build source/SuccessStory.sln --configuration Release --no-restore
 
     - name: Download Playnite Toolbox
       shell: pwsh
@@ -40,7 +40,7 @@ jobs:
       shell: pwsh
       run: |
         # ⚠️ Replace the first path with the folder where your compiled 'extension.yaml' sits
-        ./Toolbox.exe pack "source/playnite-successstory-plugin/bin/Release" "./build"
+        ./Toolbox.exe pack "source/" "./build"
 
     - name: Upload Compiled Addon to GitHub
       uses: actions/upload-artifact@v4
