@@ -40,19 +40,19 @@ jobs:
     - name: Download and Unpack Playnite Portable
       shell: pwsh
       run: |
-        # 1. Download official portable archive directly from the release mirrors
-        Invoke-WebRequest -Uri "https://github.com" -OutFile "playnite.7z"
+        # 1. Use curl with location redirect flags to download the exact 10.56 7z file
+        curl.exe -L "https://github.com" -o "playnite.7z"
         
-        # 2. Extract using native 7-Zip installed on the Windows image
+        # 2. Extract using native 7-Zip
         & "7z" x "playnite.7z" -o"./PlayniteTools"
 
     - name: Package Extension (.pext)
       shell: pwsh
       run: |
-        # 1. Force generate build destination to guarantee the path exists
+        # 1. Ensure output folder exists
         New-Item -ItemType Directory -Force -Path "./build"
 
-        # 2. Copy the extension.yaml file into the compilation output folder so Toolbox can register metadata
+        # 2. Copy the extension.yaml file into the compilation output folder
         Copy-Item "./source/extension.yaml" -Destination "./source/bin/Release" -ErrorAction SilentlyContinue
         
         # 3. Use the working, native compiled Toolbox.exe from the portable core
